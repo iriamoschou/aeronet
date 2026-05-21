@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AeroNetB ASCM Dashboard</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --aero-dark:   #0d1b2a;
+  --aero-blue:   #1565c0;
+  --aero-light:  #e3f2fd;
+  --aero-accent: #00b0ff;
+  --aero-danger: #d32f2f;
+  --aero-warn:   #f57c00;
+  --aero-ok:     #2e7d32;
+}
+body { background:#f4f6f9; font-family:'Segoe UI',sans-serif; }
+
+/* ── Login ──────────────────────────────────────────────── */
+#login-screen {
+  min-height:100vh; display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(135deg,var(--aero-dark) 0%,var(--aero-blue) 100%);
+}
+.login-card { width:420px; border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,.4); }
+.login-logo { font-size:2.2rem; font-weight:800; color:var(--aero-accent); letter-spacing:2px; }
+.login-sub  { color:#90caf9; font-size:.85rem; }
+
+/* ── Sidebar ─────────────────────────────────────────────── */
+#app-shell { display:none; }
+#sidebar {
+  width:240px; min-height:100vh; background:var(--aero-dark);
+  position:fixed; top:0; left:0; z-index:100;
+  display:flex; flex-direction:column;
+}
+.sidebar-brand {
+  padding:22px 20px; border-bottom:1px solid rgba(255,255,255,.08);
+  font-size:1.1rem; font-weight:700; color:#fff; letter-spacing:1px;
+}
+.sidebar-brand span { color:var(--aero-accent); }
+.sidebar-role {
+  padding:8px 20px 16px; font-size:.75rem;
+  color:#90caf9; text-transform:uppercase; letter-spacing:1px;
+}
+.nav-link-side {
+  display:flex; align-items:center; gap:10px;
+  padding:11px 20px; color:#b0bec5; text-decoration:none;
+  font-size:.9rem; border-left:3px solid transparent; transition:.2s;
+}
+.nav-link-side:hover, .nav-link-side.active {
+  color:#fff; background:rgba(255,255,255,.06);
+  border-left-color:var(--aero-accent);
+}
+.nav-link-side i { font-size:1.1rem; width:20px; }
+
+/* ── Main content ────────────────────────────────────────── */
+#main-content { margin-left:240px; padding:0; }
+.topbar {
+  background:#fff; border-bottom:1px solid #e0e0e0;
+  padding:14px 28px; display:flex; align-items:center;
+  justify-content:space-between; position:sticky; top:0; z-index:99;
+}
+.page-title { font-size:1.3rem; font-weight:700; color:var(--aero-dark); }
+.user-badge { background:var(--aero-light); padding:6px 14px;
+              border-radius:20px; font-size:.85rem; color:var(--aero-blue); font-weight:600; }
+
+.content-area { padding:28px; }
+
+/* ── Cards ───────────────────────────────────────────────── */
+.kpi-card {
+  border-radius:12px; padding:20px 24px; color:#fff;
+  box-shadow:0 4px 20px rgba(0,0,0,.12); min-height:110px;
+}
+.kpi-card.blue   { background:linear-gradient(135deg,#1565c0,#1e88e5); }
+.kpi-card.green  { background:linear-gradient(135deg,#2e7d32,#43a047); }
+.kpi-card.orange { background:linear-gradient(135deg,#e65100,#fb8c00); }
+.kpi-card.teal   { background:linear-gradient(135deg,#00695c,#00897b); }
+.kpi-card.red    { background:linear-gradient(135deg,#b71c1c,#e53935); }
+.kpi-value { font-size:2.2rem; font-weight:800; line-height:1; }
+.kpi-label { font-size:.82rem; opacity:.85; margin-top:4px; }
+
+.data-card {
+  background:#fff; border-radius:12px; border:1px solid #e8ecf0;
+  box-shadow:0 2px 12px rgba(0,0,0,.06);
+}
+.data-card .card-header {
+  background:transparent; border-bottom:1px solid #e8ecf0;
+  font-weight:700; color:var(--aero-dark); padding:16px 20px; font-size:.95rem;
+}
+.data-card .card-body { padding:20px; }
+
+/* ── Status badges ───────────────────────────────────────── */
+.badge-status { border-radius:20px; padding:4px 12px; font-size:.76rem; font-weight:600; }
+.s-placed      { background:#e3f2fd; color:#1565c0; }
+.s-confirmed   { background:#e8f5e9; color:#2e7d32; }
+.s-dispatched  { background:#fff3e0; color:#e65100; }
+.s-delivered   { background:#e0f2f1; color:#00695c; }
+.s-completed   { background:#f3e5f5; color:#6a1b9a; }
+.s-in_transit  { background:#fff3e0; color:#e65100; }
+.s-delayed     { background:#ffebee; color:#b71c1c; }
+.s-pass        { background:#e8f5e9; color:#2e7d32; }
+.s-fail        { background:#ffebee; color:#b71c1c; }
+.s-operational { background:#e8f5e9; color:#2e7d32; }
+.s-maintenance { background:#fff3e0; color:#e65100; }
+.s-draft       { background:#fafafa; color:#757575; }
+.s-approved    { background:#e8f5e9; color:#2e7d32; }
+
+/* ── Tables ──────────────────────────────────────────────── */
+.table th { font-size:.8rem; text-transform:uppercase; letter-spacing:.5px;
+            color:#78909c; border-bottom-width:1px; font-weight:600; }
+.table td { font-size:.88rem; vertical-align:middle; }
+.table tbody tr:hover { background:#f9fbff; }
+
+/* ── Alert strip ─────────────────────────────────────────── */
+.alert-strip { border-radius:8px; padding:10px 16px; font-size:.88rem; }
+
+/* ── Forms ───────────────────────────────────────────────── */
+.form-section { background:#fff; border-radius:12px; padding:24px; border:1px solid #e8ecf0; }
+
+/* ── Chart containers ────────────────────────────────────── */
+.chart-box { position:relative; height:260px; }
+
+/* ── Page sections ───────────────────────────────────────── */
+.page-section { display:none; }
+.page-section.active { display:block; }
+
+/* ── Loader ──────────────────────────────────────────────── */
+.spinner-wrap { text-align:center; padding:40px; color:#90a4ae; }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════
+     LOGIN SCREEN
+═════════════════════════════════════════════════════════════ -->
+<div id="login-screen">
+  <div class="login-card card p-4">
+    <div class="text-center mb-4">
+      <div class="login-logo">Aero<span>NetB</span></div>
+      <div class="login-sub mt-1">Aerospace Supply Chain Management System</div>
+      <div class="login-sub">5CM506 Data Driven Systems — Student 100774688</div>
+    </div>
+    <div id="login-error" class="alert alert-danger d-none py-2" role="alert"></div>
+    <div class="mb-3">
+      <label class="form-label fw-semibold small">Email Address</label>
+      <input id="inp-email" type="email" class="form-control" placeholder="you@aeronetb.com">
+    </div>
+    <div class="mb-4">
+      <label class="form-label fw-semibold small">Password</label>
+      <input id="inp-pass" type="password" class="form-control" placeholder="Password">
+    </div>
+    <button class="btn btn-primary w-100 fw-bold" onclick="doLogin()">Sign In</button>
+    <hr class="my-3">
+    <div class="text-muted small text-center">
+      <strong>Demo accounts:</strong><br>
+      sarah.mitchell@aeronetb.com — Procurement<br>
+      james.nakamura@aeronetb.com — Quality Inspector<br>
+      fatima.alrashid@aeronetb.com — Supply Chain Manager<br>
+      david.okafor@aeronetb.com — Equipment Engineer<br>
+      elena.vasquez@regulator.eu — Auditor<br>
+      <em>Password for all demo accounts: Demo1234!</em>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     APP SHELL (shown after login)
+═════════════════════════════════════════════════════════════ -->
+<div id="app-shell">
+
+  <!-- SIDEBAR -->
+  <nav id="sidebar">
+    <div class="sidebar-brand">Aero<span>NetB</span> ASCM</div>
+    <div class="sidebar-role" id="sidebar-role">Loading…</div>
+
+    <a href="#" class="nav-link-side active" onclick="showPage('dashboard')">
+      <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+    <a href="#" class="nav-link-side" onclick="showPage('orders')" id="nav-orders">
+      <i class="bi bi-file-earmark-text"></i> Orders
+    </a>
+    <a href="#" class="nav-link-side" onclick="showPage('suppliers')" id="nav-suppliers">
+      <i class="bi bi-building"></i> Suppliers
+    </a>
+    <a href="#" class="nav-link-side" onclick="showPage('shipments')" id="nav-shipments">
+      <i class="bi bi-truck"></i> Shipments
+    </a>
+    <a href="#" class="nav-link-side" onclick="showPage('qc')" id="nav-qc">
+      <i class="bi bi-clipboard-check"></i> QC Reports
+    </a>
+    <a href="#" class="nav-link-side" onclick="showPage('certifications')" id="nav-certs">
+      <i class="bi bi-patch-check"></i> Certifications
+    </a>
+    <a href="#" class="nav-link-side" onclick="showPage('iot')" id="nav-iot">
+      <i class="bi bi-cpu"></i> IoT Monitoring
+    </a>
+    <a href="#" class="nav-link-side" onclick="showPage('audit')" id="nav-audit">
+      <i class="bi bi-journal-text"></i> Audit Log
+    </a>
+
+    <div class="mt-auto p-3 border-top border-secondary">
+      <button class="btn btn-outline-secondary btn-sm w-100" onclick="doLogout()">
+        <i class="bi bi-box-arrow-left"></i> Sign Out
+      </button>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <div id="main-content">
+    <div class="topbar">
+      <div class="page-title" id="topbar-title">Dashboard</div>
+      <div class="user-badge" id="user-badge">Loading…</div>
+    </div>
+
+    <div class="content-area">
+
+      <!-- ─────────────── DASHBOARD ─────────────── -->
+      <div id="page-dashboard" class="page-section active">
+        <div class="row g-3 mb-4" id="kpi-row">
+          <div class="col-md-3"><div class="kpi-card blue">
+            <div class="kpi-value" id="kpi-orders">–</div>
+            <div class="kpi-label"><i class="bi bi-file-earmark-text"></i> Total Orders</div>
+          </div></div>
+          <div class="col-md-3"><div class="kpi-card orange">
+            <div class="kpi-value" id="kpi-shipments">–</div>
+            <div class="kpi-label"><i class="bi bi-truck"></i> Active Shipments</div>
+          </div></div>
+          <div class="col-md-3"><div class="kpi-card green">
+            <div class="kpi-value" id="kpi-qc-pass">–</div>
+            <div class="kpi-label"><i class="bi bi-clipboard-check"></i> QC Pass Rate</div>
+          </div></div>
+          <div class="col-md-3"><div class="kpi-card red">
+            <div class="kpi-value" id="kpi-alerts">–</div>
+            <div class="kpi-label"><i class="bi bi-exclamation-triangle"></i> IoT Alerts</div>
+          </div></div>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-lg-6">
+            <div class="data-card">
+              <div class="card-header"><i class="bi bi-bar-chart"></i> Supplier On-Time Delivery (%)</div>
+              <div class="card-body"><div class="chart-box"><canvas id="chart-supplier-kpi"></canvas></div></div>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="data-card">
+              <div class="card-header"><i class="bi bi-pie-chart"></i> QC Results by Outcome</div>
+              <div class="card-body"><div class="chart-box"><canvas id="chart-qc-outcome"></canvas></div></div>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="data-card">
+              <div class="card-header"><i class="bi bi-truck"></i> Shipments by Status</div>
+              <div class="card-body"><div class="chart-box"><canvas id="chart-shipment-status"></canvas></div></div>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="data-card">
+              <div class="card-header"><i class="bi bi-exclamation-triangle text-warning"></i> Recent IoT Alerts</div>
+              <div class="card-body" id="iot-alert-list">
+                <div class="spinner-wrap"><div class="spinner-border spinner-border-sm"></div> Loading…</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─────────────── ORDERS ─────────────── -->
+      <div id="page-orders" class="page-section">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="fw-bold mb-0">Purchase Orders</h5>
+          <button class="btn btn-primary btn-sm" id="btn-new-order" onclick="showNewOrderForm()">
+            <i class="bi bi-plus"></i> New Order
+          </button>
+        </div>
+
+        <!-- New order form (hidden by default) -->
+        <div id="new-order-form" class="form-section mb-3 d-none">
+          <h6 class="fw-bold mb-3">Create Purchase Order</h6>
+          <div class="row g-2">
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold">Supplier</label>
+              <select id="new-order-supplier" class="form-select form-select-sm"></select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold">Order Date</label>
+              <input type="date" id="new-order-date" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold">Desired Delivery Date</label>
+              <input type="date" id="new-order-delivery" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold">Total Value (£)</label>
+              <input type="number" id="new-order-value" class="form-control form-control-sm" placeholder="0.00">
+            </div>
+            <div class="col-md-8">
+              <label class="form-label small fw-semibold">Notes</label>
+              <input type="text" id="new-order-notes" class="form-control form-control-sm" placeholder="Optional notes">
+            </div>
+          </div>
+          <div class="mt-3">
+            <button class="btn btn-success btn-sm me-2" onclick="submitOrder()">Submit Order</button>
+            <button class="btn btn-secondary btn-sm" onclick="hideNewOrderForm()">Cancel</button>
+          </div>
+          <div id="order-form-msg" class="mt-2"></div>
+        </div>
+
+        <div class="data-card">
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover mb-0">
+                <thead><tr>
+                  <th>Order ID</th><th>Supplier</th><th>Order Date</th>
+                  <th>Delivery Due</th><th>Status</th><th>Value</th>
+                </tr></thead>
+                <tbody id="orders-tbody">
+                  <tr><td colspan="6" class="spinner-wrap"><div class="spinner-border spinner-border-sm"></div></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─────────────── SUPPLIERS ─────────────── -->
+      <div id="page-suppliers" class="page-section">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="fw-bold mb-0">Supplier Directory</h5>
+        </div>
+        <div class="row g-3" id="supplier-cards">
+          <div class="col-12 spinner-wrap"><div class="spinner-border spinner-border-sm"></div></div>
+        </div>
+      </div>
+
+      <!-- ─────────────── SHIPMENTS ─────────────── -->
+      <div id="page-shipments" class="page-section">
+        <h5 class="fw-bold mb-3">Shipment Tracking</h5>
+        <div id="delayed-banner" class="d-none alert alert-warning alert-strip mb-3">
+          <i class="bi bi-exclamation-triangle-fill"></i>
+          <strong id="delayed-count">0</strong> shipment(s) are overdue. Review required.
+        </div>
+        <div class="data-card">
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover mb-0">
+                <thead><tr>
+                  <th>ID</th><th>Tracking #</th><th>Supplier</th>
+                  <th>ETA</th><th>Port of Entry</th><th>Status</th><th>Events</th>
+                </tr></thead>
+                <tbody id="shipments-tbody">
+                  <tr><td colspan="7" class="spinner-wrap"><div class="spinner-border spinner-border-sm"></div></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <!-- Event drawer -->
+        <div id="shipment-events-panel" class="data-card mt-3 d-none">
+          <div class="card-header">Shipment Events — <span id="events-tracking-no"></span></div>
+          <div class="card-body p-0">
+            <table class="table mb-0">
+              <thead><tr><th>Timestamp</th><th>Event</th><th>Location</th><th>Notes</th></tr></thead>
+              <tbody id="events-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─────────────── QC REPORTS ─────────────── -->
+      <div id="page-qc" class="page-section">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="fw-bold mb-0">Quality Control Reports</h5>
+          <button class="btn btn-primary btn-sm" id="btn-new-qc" onclick="showQCForm()">
+            <i class="bi bi-plus"></i> New QC Report
+          </button>
+        </div>
+        <!-- QC form -->
+        <div id="qc-form" class="form-section mb-3 d-none">
+          <h6 class="fw-bold mb-3">Submit QC Report</h6>
+          <div class="row g-2">
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold">Delivered Item ID</label>
+              <input type="number" id="qc-item-id" class="form-control form-control-sm" placeholder="e.g. 1">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold">Report Type</label>
+              <select id="qc-type" class="form-select form-select-sm">
+                <option>dimensional_NDT</option>
+                <option>environmental</option>
+                <option>visual</option>
+                <option>NDT</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold">Outcome</label>
+              <select id="qc-outcome" class="form-select form-select-sm">
+                <option>pass</option>
+                <option>fail</option>
+                <option>pending</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label small fw-semibold">Comments</label>
+              <textarea id="qc-comments" class="form-control form-control-sm" rows="2"></textarea>
+            </div>
+          </div>
+          <div class="mt-3">
+            <button class="btn btn-success btn-sm me-2" onclick="submitQCReport()">Submit</button>
+            <button class="btn btn-secondary btn-sm" onclick="hideQCForm()">Cancel</button>
+          </div>
+          <div id="qc-form-msg" class="mt-2"></div>
+        </div>
+
+        <div class="data-card">
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover mb-0">
+                <thead><tr>
+                  <th>Report ID</th><th>Type</th><th>Item ID</th>
+                  <th>Inspector</th><th>Date</th><th>Outcome</th><th>Version</th>
+                </tr></thead>
+                <tbody id="qc-tbody">
+                  <tr><td colspan="7" class="spinner-wrap"><div class="spinner-border spinner-border-sm"></div></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─────────────── CERTIFICATIONS ─────────────── -->
+      <div id="page-certifications" class="page-section">
+        <h5 class="fw-bold mb-3">Certification Records</h5>
+        <div class="alert alert-info alert-strip mb-3">
+          <i class="bi bi-lock-fill"></i>
+          <strong>Immutability policy:</strong> Approved certifications are locked and cannot be edited. This ensures compliance with EASA and AS9100 traceability requirements.
+        </div>
+        <div class="data-card">
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover mb-0">
+                <thead><tr>
+                  <th>Cert ID</th><th>Type</th><th>Item ID</th>
+                  <th>Inspector</th><th>Approval Date</th><th>Status</th><th>Locked</th>
+                </tr></thead>
+                <tbody id="certs-tbody">
+                  <tr><td colspan="7" class="spinner-wrap"><div class="spinner-border spinner-border-sm"></div></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─────────────── IoT MONITORING ─────────────── -->
+      <div id="page-iot" class="page-section">
+        <h5 class="fw-bold mb-3">Equipment & IoT Monitoring</h5>
+        <div class="row g-3 mb-3" id="equip-status-cards">
+          <div class="col-12 spinner-wrap"><div class="spinner-border spinner-border-sm"></div></div>
+        </div>
+        <div class="row g-3">
+          <div class="col-lg-8">
+            <div class="data-card">
+              <div class="card-header"><i class="bi bi-activity"></i> Live IoT Sensor Readings</div>
+              <div class="card-body p-0">
+                <div class="table-responsive">
+                  <table class="table table-hover mb-0">
+                    <thead><tr>
+                      <th>Device ID</th><th>Context</th><th>Temp (°C)</th>
+                      <th>Vibration</th><th>GPS</th><th>Timestamp</th><th>Alert</th>
+                    </tr></thead>
+                    <tbody id="iot-tbody">
+                      <tr><td colspan="7" class="spinner-wrap"><div class="spinner-border spinner-border-sm"></div></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-4">
+            <div class="data-card h-100">
+              <div class="card-header"><i class="bi bi-thermometer-half"></i> Sensor Overview</div>
+              <div class="card-body"><div class="chart-box"><canvas id="chart-iot-temp"></canvas></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─────────────── AUDIT LOG ─────────────── -->
+      <div id="page-audit" class="page-section">
+        <h5 class="fw-bold mb-3">Audit Trail</h5>
+        <div class="alert alert-secondary alert-strip mb-3">
+          <i class="bi bi-shield-lock"></i>
+          All data access and modification events are recorded here, attributed to the acting user's Employee ID (empId).
+        </div>
+        <div class="data-card">
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover mb-0">
+                <thead><tr>
+                  <th>Timestamp</th><th>User (empId)</th><th>Action</th>
+                  <th>Entity</th><th>Description</th><th>Outcome</th>
+                </tr></thead>
+                <tbody id="audit-tbody">
+                  <tr><td colspan="6" class="spinner-wrap"><div class="spinner-border spinner-border-sm"></div></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content-area -->
+  </div><!-- /main-content -->
+</div><!-- /app-shell -->
+
+<!-- ════════════════════════════════════════════════════════
+     JAVASCRIPT
+═════════════════════════════════════════════════════════════ -->
+<script>
+const API = 'http://localhost:5000/api';
+let token = null, currentUser = null;
+let chartSupplier=null, chartQC=null, chartShipment=null, chartIoT=null;
+
+// ── Auth ────────────────────────────────────────────────────
+async function doLogin() {
+  const email = document.getElementById('inp-email').value.trim();
+  const pass  = document.getElementById('inp-pass').value;
+  const errEl = document.getElementById('login-error');
+  errEl.classList.add('d-none');
+  try {
+    const res = await fetch(`${API}/auth/login`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({email, password: pass})
+    });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || 'Login failed'; errEl.classList.remove('d-none'); return; }
+    token = data.token;
+    currentUser = data.user;
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app-shell').style.display = 'block';
+    document.getElementById('user-badge').textContent = `${currentUser.full_name} · ${currentUser.role}`;
+    document.getElementById('sidebar-role').textContent = currentUser.role;
+    applyRBAC();
+    loadDashboard();
+  } catch(e) {
+    errEl.textContent = 'Cannot reach server. Is Flask running?';
+    errEl.classList.remove('d-none');
+  }
+}
+document.getElementById('inp-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+
+function doLogout() {
+  token = null; currentUser = null;
+  document.getElementById('app-shell').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+// ── RBAC: show/hide nav items per role ──────────────────────
+function applyRBAC() {
+  const role = currentUser.role;
+  const rules = {
+    'ProcurementOfficer':  ['nav-orders','nav-suppliers','nav-shipments'],
+    'QualityInspector':    ['nav-qc','nav-certs','nav-shipments'],
+    'SupplyChainManager':  ['nav-orders','nav-suppliers','nav-shipments','nav-certs','nav-audit'],
+    'EquipmentEngineer':   ['nav-iot','nav-shipments'],
+    'Auditor':             ['nav-suppliers','nav-shipments','nav-qc','nav-certs','nav-audit']
+  };
+  // Hide all role-specific links first
+  ['nav-orders','nav-suppliers','nav-shipments','nav-qc','nav-certs','nav-iot','nav-audit']
+    .forEach(id => document.getElementById(id).style.display = 'none');
+  // Show relevant ones
+  (rules[role] || []).forEach(id => document.getElementById(id).style.display = 'flex');
+
+  // Hide write buttons for auditors and read-only roles
+  if (role === 'Auditor') {
+    document.getElementById('btn-new-order')?.classList.add('d-none');
+    document.getElementById('btn-new-qc')?.classList.add('d-none');
+  }
+}
+
+// ── Navigation ───────────────────────────────────────────────
+function showPage(page) {
+  document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-link-side').forEach(l => l.classList.remove('active'));
+  const el = document.getElementById(`page-${page}`);
+  if (el) el.classList.add('active');
+  const titles = {dashboard:'Dashboard',orders:'Purchase Orders',suppliers:'Suppliers',
+                  shipments:'Shipments',qc:'QC Reports',certifications:'Certifications',
+                  iot:'IoT Monitoring',audit:'Audit Log'};
+  document.getElementById('topbar-title').textContent = titles[page] || page;
+
+  const loaders = {
+    orders: loadOrders, suppliers: loadSuppliers, shipments: loadShipments,
+    qc: loadQC, certifications: loadCerts, iot: loadIoT, audit: loadAudit
+  };
+  if (loaders[page]) loaders[page]();
+  event?.preventDefault();
+}
+
+// ── API helper ───────────────────────────────────────────────
+async function apiFetch(path, opts={}) {
+  const res = await fetch(`${API}${path}`, {
+    ...opts,
+    headers: { 'Authorization':`Bearer ${token}`, 'Content-Type':'application/json', ...(opts.headers||{}) }
+  });
+  if (res.status === 401) { doLogout(); return null; }
+  return res.json();
+}
+
+// ── Dashboard ────────────────────────────────────────────────
+async function loadDashboard() {
+  const [orders, shipOverview, qcSummary, iotAlerts] = await Promise.all([
+    apiFetch('/orders'), apiFetch('/dashboard/shipment-overview'),
+    apiFetch('/dashboard/qc-summary'), apiFetch('/dashboard/iot-alerts')
+  ]);
+
+  // KPI tiles
+  document.getElementById('kpi-orders').textContent = orders?.length ?? '–';
+  const active = (shipOverview?.by_status||[]).filter(s => s.status === 'in_transit').reduce((a,b)=>a+Number(b.count),0);
+  document.getElementById('kpi-shipments').textContent = active;
+  const pass = (qcSummary?.by_outcome||[]).find(o=>o.outcome_status==='pass')?.count || 0;
+  const total= (qcSummary?.by_outcome||[]).reduce((a,b)=>a+b.count,0) || 1;
+  document.getElementById('kpi-qc-pass').textContent = Math.round(pass/total*100)+'%';
+  document.getElementById('kpi-alerts').textContent = iotAlerts?.iot_alerts?.length ?? '–';
+
+  // Supplier KPI chart
+  const kpis = await apiFetch('/dashboard/supplier-kpis');
+  renderSupplierChart(kpis);
+  renderQCChart(qcSummary?.by_outcome || []);
+  renderShipmentChart(shipOverview?.by_status || []);
+  renderIoTAlertList(iotAlerts?.iot_alerts || []);
+}
+
+function renderSupplierChart(data) {
+  if (!data?.length) return;
+  const ctx = document.getElementById('chart-supplier-kpi');
+  if (chartSupplier) chartSupplier.destroy();
+  chartSupplier = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels: data.map(d => d.business_name.split(' ')[0]),
+      datasets:[{
+        label:'On-Time Delivery (%)',
+        data: data.map(d => d.on_time_pct ?? 0),
+        backgroundColor:['#1565c0','#2e7d32','#e65100','#00695c','#6a1b9a'],
+        borderRadius:6
+      }]
+    },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false} },
+      scales:{ y:{ min:0,max:100, ticks:{callback:v=>v+'%'} } }
+    }
+  });
+}
+
+function renderQCChart(data) {
+  if (!data?.length) return;
+  const ctx = document.getElementById('chart-qc-outcome');
+  if (chartQC) chartQC.destroy();
+  chartQC = new Chart(ctx, {
+    type:'doughnut',
+    data:{
+      labels: data.map(d=>d.outcome_status),
+      datasets:[{
+        data: data.map(d=>d.count),
+        backgroundColor:['#2e7d32','#d32f2f','#757575'],
+        borderWidth:2
+      }]
+    },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{position:'bottom'} }
+    }
+  });
+}
+
+function renderShipmentChart(data) {
+  if (!data?.length) return;
+  const ctx = document.getElementById('chart-shipment-status');
+  if (chartShipment) chartShipment.destroy();
+  const colors = {in_transit:'#fb8c00',delivered:'#43a047',delayed:'#e53935',arrived_port:'#1e88e5',customs:'#8e24aa'};
+  chartShipment = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels: data.map(d=>d.status.replace(/_/g,' ')),
+      datasets:[{ label:'Shipments',
+        data: data.map(d=>d.count),
+        backgroundColor: data.map(d=>colors[d.status]||'#90a4ae'),
+        borderRadius:6
+      }]
+    },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false} },
+      scales:{ y:{ beginAtZero:true, ticks:{precision:0} } }
+    }
+  });
+}
+
+function renderIoTAlertList(alerts) {
+  const el = document.getElementById('iot-alert-list');
+  if (!alerts.length) {
+    el.innerHTML = '<div class="text-success small"><i class="bi bi-check-circle"></i> No active alerts</div>';
+    return;
+  }
+  el.innerHTML = alerts.slice(0,5).map(a => `
+    <div class="alert-strip alert-warning mb-2">
+      <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+      <strong>${a.iot_device_id}</strong> — ${a.context_id}<br>
+      <small class="text-muted">${a.timestamp?.substring(0,19)||''}</small>
+    </div>`).join('');
+}
+
+// ── Orders ────────────────────────────────────────────────────
+async function loadOrders() {
+  const orders = await apiFetch('/orders');
+  if (!orders) return;
+  document.getElementById('orders-tbody').innerHTML = orders.map(o => `
+    <tr>
+      <td>#${o.order_id}</td>
+      <td>${o.supplier_name}</td>
+      <td>${o.order_date||'–'}</td>
+      <td>${o.desired_delivery_date||'–'}</td>
+      <td><span class="badge-status s-${o.status}">${o.status}</span></td>
+      <td>£${Number(o.total_value||0).toLocaleString()}</td>
+    </tr>`).join('') || '<tr><td colspan="6" class="text-center text-muted">No orders found</td></tr>';
+}
+
+function showNewOrderForm() {
+  loadSuppliersForSelect();
+  document.getElementById('new-order-form').classList.remove('d-none');
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('new-order-date').value = today;
+}
+function hideNewOrderForm() { document.getElementById('new-order-form').classList.add('d-none'); }
+
+async function loadSuppliersForSelect() {
+  const suppliers = await apiFetch('/suppliers');
+  const sel = document.getElementById('new-order-supplier');
+  sel.innerHTML = (suppliers||[]).map(s=>`<option value="${s.supplier_id}">${s.business_name}</option>`).join('');
+}
+
+async function submitOrder() {
+  const body = {
+    supplier_id: Number(document.getElementById('new-order-supplier').value),
+    order_date:  document.getElementById('new-order-date').value,
+    desired_delivery_date: document.getElementById('new-order-delivery').value || null,
+    total_value: document.getElementById('new-order-value').value || null,
+    notes:       document.getElementById('new-order-notes').value
+  };
+  const res = await apiFetch('/orders', {method:'POST', body:JSON.stringify(body)});
+  const msg = document.getElementById('order-form-msg');
+  if (res?.order_id) {
+    msg.innerHTML = `<div class="alert alert-success py-1 small">Order #${res.order_id} created</div>`;
+    hideNewOrderForm(); loadOrders();
+  } else {
+    msg.innerHTML = `<div class="alert alert-danger py-1 small">${res?.error||'Error creating order'}</div>`;
+  }
+}
+
+// ── Suppliers ─────────────────────────────────────────────────
+async function loadSuppliers() {
+  const suppliers = await apiFetch('/suppliers');
+  if (!suppliers) return;
+  document.getElementById('supplier-cards').innerHTML = suppliers.map(s => `
+    <div class="col-md-4">
+      <div class="data-card p-3">
+        <div class="fw-bold">${s.business_name}</div>
+        <div class="small text-muted">${s.country||'–'}</div>
+        <div class="small mt-2"><i class="bi bi-patch-check text-primary"></i> ${s.accreditation_status||'–'}</div>
+        <div class="small"><i class="bi bi-envelope"></i> ${s.contact_email||'–'}</div>
+        <div class="small"><i class="bi bi-telephone"></i> ${s.contact_phone||'–'}</div>
+        <span class="badge-status ${s.is_active?'s-confirmed':'s-delayed'} mt-2 d-inline-block">
+          ${s.is_active?'Active':'Inactive'}
+        </span>
+      </div>
+    </div>`).join('');
+}
+
+// ── Shipments ─────────────────────────────────────────────────
+async function loadShipments() {
+  const [shipments, overview] = await Promise.all([
+    apiFetch('/shipments'), apiFetch('/dashboard/shipment-overview')
+  ]);
+  if (!shipments) return;
+  const delayed = overview?.delayed || [];
+  if (delayed.length) {
+    document.getElementById('delayed-count').textContent = delayed.length;
+    document.getElementById('delayed-banner').classList.remove('d-none');
+  }
+  document.getElementById('shipments-tbody').innerHTML = shipments.map(s => `
+    <tr>
+      <td>${s.shipment_id}</td>
+      <td><code>${s.tracking_number||'–'}</code></td>
+      <td>${s.supplier_name||'–'}</td>
+      <td>${s.eta_date||'–'}</td>
+      <td>${s.port_of_entry||'–'}</td>
+      <td><span class="badge-status s-${s.status}">${s.status?.replace(/_/g,' ')}</span></td>
+      <td><button class="btn btn-outline-primary btn-sm py-0" onclick="loadEvents(${s.shipment_id},'${s.tracking_number}')">
+        <i class="bi bi-clock-history"></i>
+      </button></td>
+    </tr>`).join('');
+}
+
+async function loadEvents(id, tracking) {
+  const events = await apiFetch(`/shipments/${id}/events`);
+  document.getElementById('events-tracking-no').textContent = tracking;
+  document.getElementById('events-tbody').innerHTML = (events||[]).map(e=>`
+    <tr>
+      <td>${e.event_timestamp?.substring(0,19)||'–'}</td>
+      <td>${e.event_type}</td>
+      <td>${e.location||'–'}</td>
+      <td>${e.condition_notes||'–'}</td>
+    </tr>`).join('');
+  document.getElementById('shipment-events-panel').classList.remove('d-none');
+}
+
+// ── QC Reports ────────────────────────────────────────────────
+async function loadQC() {
+  const reports = await apiFetch('/qc/reports');
+  if (!reports) return;
+  document.getElementById('qc-tbody').innerHTML = reports.map(r=>`
+    <tr>
+      <td><code>${r.report_id}</code></td>
+      <td>${r.report_type}</td>
+      <td>${r.delivered_item_id}</td>
+      <td>${r.inspector_name||r.inspector_emp_id}</td>
+      <td>${r.inspection_timestamp?.substring(0,10)||'–'}</td>
+      <td><span class="badge-status s-${r.outcome_status}">${r.outcome_status}</span></td>
+      <td>v${r.version_number}</td>
+    </tr>`).join('');
+}
+
+function showQCForm() { document.getElementById('qc-form').classList.remove('d-none'); }
+function hideQCForm()  { document.getElementById('qc-form').classList.add('d-none'); }
+
+async function submitQCReport() {
+  const body = {
+    delivered_item_id: Number(document.getElementById('qc-item-id').value),
+    report_type:       document.getElementById('qc-type').value,
+    outcome_status:    document.getElementById('qc-outcome').value,
+    comments:          document.getElementById('qc-comments').value
+  };
+  const res = await apiFetch('/qc/reports', {method:'POST', body:JSON.stringify(body)});
+  const msg = document.getElementById('qc-form-msg');
+  if (res?.report_id) {
+    msg.innerHTML = `<div class="alert alert-success py-1 small">Report ${res.report_id} submitted</div>`;
+    hideQCForm(); loadQC();
+  } else {
+    msg.innerHTML = `<div class="alert alert-danger py-1 small">${res?.error||'Error submitting report'}</div>`;
+  }
+}
+
+// ── Certifications ────────────────────────────────────────────
+async function loadCerts() {
+  const certs = await apiFetch('/certifications');
+  if (!certs) return;
+  document.getElementById('certs-tbody').innerHTML = certs.map(c=>`
+    <tr>
+      <td><code>${c.cert_id}</code></td>
+      <td>${c.certification_type}</td>
+      <td>${c.delivered_item_id}</td>
+      <td>${c.inspector_details?.name||'–'}</td>
+      <td>${c.approval_date?.substring(0,10)||'Pending'}</td>
+      <td><span class="badge-status s-${c.approval_status}">${c.approval_status}</span></td>
+      <td>${c.is_immutable?'<span class="text-danger"><i class="bi bi-lock-fill"></i> Locked</span>':
+                           '<span class="text-muted"><i class="bi bi-unlock"></i> Draft</span>'}</td>
+    </tr>`).join('');
+}
+
+// ── IoT Monitoring ────────────────────────────────────────────
+async function loadIoT() {
+  const [logs, equipment] = await Promise.all([
+    apiFetch('/iot/logs'), apiFetch('/equipment')
+  ]);
+
+  document.getElementById('equip-status-cards').innerHTML = (equipment||[]).map(e=>`
+    <div class="col-md-3">
+      <div class="data-card p-3">
+        <div class="fw-bold small">${e.equipment_name}</div>
+        <div class="text-muted" style="font-size:.75rem">${e.facility||'–'}</div>
+        <span class="badge-status s-${e.status} mt-1 d-inline-block">${e.status}</span>
+      </div>
+    </div>`).join('');
+
+  document.getElementById('iot-tbody').innerHTML = (logs||[]).slice(0,20).map(l=>`
+    <tr class="${l.alert_flag?'table-warning':''}">
+      <td><code>${l.iot_device_id}</code></td>
+      <td>${l.context_id||'–'}</td>
+      <td>${l.readings?.temperature!=null?l.readings.temperature+'°C':'–'}</td>
+      <td>${l.readings?.vibration!=null?l.readings.vibration:'–'}</td>
+      <td>${l.readings?.gps_location?.description||'–'}</td>
+      <td>${l.timestamp?.substring(0,19)||'–'}</td>
+      <td>${l.alert_flag?'<span class="badge bg-danger">ALERT</span>':'<span class="badge bg-success">OK</span>'}</td>
+    </tr>`).join('');
+
+  // Temperature chart for IoT logs
+  const temps = (logs||[]).filter(l=>l.readings?.temperature!=null).slice(0,10);
+  if (temps.length) {
+    const ctx = document.getElementById('chart-iot-temp');
+    if (chartIoT) chartIoT.destroy();
+    chartIoT = new Chart(ctx, {
+      type:'line',
+      data:{
+        labels: temps.map(l=>l.iot_device_id.split('-')[2]||l.iot_device_id),
+        datasets:[{
+          label:'Temperature (°C)',
+          data: temps.map(l=>l.readings.temperature),
+          borderColor:'#1565c0', backgroundColor:'rgba(21,101,192,.1)',
+          tension:.4, fill:true, pointBackgroundColor: temps.map(l=>l.alert_flag?'#d32f2f':'#2e7d32')
+        }]
+      },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} }
+    });
+  }
+}
+
+// ── Audit Log ─────────────────────────────────────────────────
+async function loadAudit() {
+  const logs = await apiFetch('/audit-logs');
+  if (!logs) return;
+  const outcome_cls = {success:'success',failure:'danger',warning:'warning'};
+  document.getElementById('audit-tbody').innerHTML = (logs||[]).slice(0,100).map(l=>`
+    <tr>
+      <td>${l.created_at?.substring(0,19)||'–'}</td>
+      <td>${l.full_name||'System'} <small class="text-muted">(${l.emp_id||'–'})</small></td>
+      <td><code>${l.action_type}</code></td>
+      <td>${l.entity_type||'–'} ${l.entity_id?'#'+l.entity_id:''}</td>
+      <td>${l.description||'–'}</td>
+      <td><span class="badge bg-${outcome_cls[l.outcome]||'secondary'}">${l.outcome}</span></td>
+    </tr>`).join('');
+}
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
